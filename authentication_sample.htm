@@ -1,0 +1,117 @@
+<!DOCTTYPE html>
+<html>
+<head>
+    <title>Aegis GetToken Sample</title>
+</head>
+<body>
+    <h1>Raw token</h1>
+    <p id="raw"></p>
+    <h1>Parsed token</h1>
+    <p id="parsed"></p>
+
+<script type="text/javascript">
+    var raw = document.getElementById("raw");
+    raw.innerHTML = "Retrieving token...";
+
+    var payload = getAegisToken("Aegis", "Symphony");
+    raw.innerHTML = payload;
+
+    document.getElementById("parsed").innerHTML = dumpJWT(parseJWT(payload));
+
+    function getAegisToken(grantType, filter)
+    {
+        if (!grantType)
+            grantType = "Aegis";
+        var params = "grant_type=" + grantType;
+        if (filter)
+            params += "&claim_provider_filter=" + filter;
+
+        var request = new XMLHttpRequest();
+        request.open("POST", "https://wsvww00a0041.ent.wfb.bank.corp:44336/token", false);
+        request.setRequestHeader("content-type", "application/x-www-form-urlencoded");
+        request.send(params);
+        return request.responseText;
+    }
+
+    function dumpJWT(jwt)
+    {
+        var result = "";
+        var header = jwt.header;
+        if (header)
+        {
+            for (var prop in header)
+            {
+                result += prop + ": " + header[prop] + "<br>";
+            }
+        }
+        var body = jwt.body;
+        if (body)
+        {
+            for (var prop in body)
+            {
+                var value = body[prop];
+                if (value instanceof Array)
+                {
+                    for (var i = 0; i < value.length; i++)
+                        result += prop + ": " + value[i] + "<br>";
+                }
+                else
+                {
+                    result += prop + ": " + value + "<br>";
+                }
+            }
+        }
+        return result;
+    }
+
+    function parseJWT(responseText)
+    {
+        //Token is wrapped first in json
+        var token = JSON.parse(responseText);
+        var str = token.access_token;
+
+        //JWT contains 3-parts: header, body (claims), and signature
+        var result = new Object;
+        str = str.replace(/\s/g, '');
+        var splits = str.split(".");
+        result.header = JSON.parse(urlBase64Decode(splits[0]));
+        result.body = JSON.parse(urlBase64Decode(splits[1]));
+        result.signature = splits[2];
+        return result;
+    }
+
+    function urlBase64Decode(str) 
+    {
+        var result = str;
+        str = str.replace('-', '+').replace('_', '/');
+        switch (str.length % 4)
+        {
+        case 0:
+            break;
+        case 2:
+            str += '==';
+            break;
+        case 3:
+            str += '=';
+            break;
+        default:
+            str += 'Illegal base64url string!';
+            return result;
+        }
+
+        try
+        {
+            result = window.atob(str);
+        } 
+        catch (e) 
+        {
+            result = JSON.stringify(e);
+        }
+        return result;
+    }
+
+</script>
+
+
+</body>
+</html>
